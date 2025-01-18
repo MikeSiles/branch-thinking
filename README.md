@@ -10,6 +10,8 @@ An MCP server that implements branch-based thought navigation, with support for:
 This is based on the `sequential-thinking` tool available here:
 https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking
 
+<a href="https://glama.ai/mcp/servers/i9a4t5f68z"><img width="380" height="200" src="https://glama.ai/mcp/servers/i9a4t5f68z/badge" alt="Branch Thinking Server MCP server" /></a>
+
 ## Features
 
 - **Branch Management**: Create and navigate between different lines of thought
