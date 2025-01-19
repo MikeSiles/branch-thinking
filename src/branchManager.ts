@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { ThoughtBranch, ThoughtData, Insight, CrossReference, InsightType, CrossRefType, BranchingThoughtInput } from './types.js';
+import { ChoffPersistenceManager, PersistenceManager } from './persistence/persistenceManager.js';
 
 export class BranchManager {
   private branches: Map<string, ThoughtBranch> = new Map();
@@ -7,6 +8,21 @@ export class BranchManager {
   private thoughtCounter = 0;
   private crossRefCounter = 0;
   private activeBranchId: string | null = null;
+  private persistenceManager?: PersistenceManager;
+
+  constructor(storageDir?: string) {
+    if (storageDir) {
+      this.persistenceManager = new ChoffPersistenceManager(this, storageDir);
+      // Enable auto-save every 30 seconds
+      this.persistenceManager.enableAutoSave(30000);
+    }
+  }
+
+  async initialize(): Promise<void> {
+    if (this.persistenceManager) {
+      await this.persistenceManager.loadState();
+    }
+  }
 
   generateId(prefix: string): string {
     const timestamp = Date.now();
@@ -117,7 +133,41 @@ export class BranchManager {
     }
 
     this.updateBranchMetrics(branch);
+
+    // Trigger persistence if enabled
+    if (this.persistenceManager) {
+      this.persistenceManager.saveState().catch(error => {
+        console.error('Failed to persist state:', error);
+      });
+    }
+
     return thought;
+  }
+
+  reconstructBranch(branch: ThoughtBranch): void {
+    // Update counters based on reconstructed branch
+    branch.thoughts.forEach(t => {
+      const thoughtNum = parseInt(t.id.split('-')[1]);
+      this.thoughtCounter = Math.max(this.thoughtCounter, thoughtNum);
+    });
+
+    branch.insights.forEach(i => {
+      const insightNum = parseInt(i.id.split('-')[1]);
+      this.insightCounter = Math.max(this.insightCounter, insightNum);
+    });
+
+    branch.crossRefs.forEach(r => {
+      const refNum = parseInt(r.id.split('-')[1]);
+      this.crossRefCounter = Math.max(this.crossRefCounter, refNum);
+    });
+
+    // Store the reconstructed branch
+    this.branches.set(branch.id, branch);
+
+    // Set as active if it's the first branch
+    if (!this.activeBranchId) {
+      this.activeBranchId = branch.id;
+    }
   }
 
   private updateBranchMetrics(branch: ThoughtBranch): void {

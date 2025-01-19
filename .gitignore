@@ -35,3 +35,7 @@ temp/
 
 # Debug files
 .node-debug/
+
+# Storage
+storage/branches/*
+!storage/branches/.gitkeep

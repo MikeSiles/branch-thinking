@@ -11,8 +11,18 @@ import { BranchManager } from './branchManager.js';
 import { BranchingThoughtInput } from './types.js';
 import chalk from 'chalk';
 
+const DEFAULT_STORAGE_DIR = '/Users/dd_dent/code/branch-thinking/storage/branches';
+
 class BranchingThoughtServer {
-  private branchManager = new BranchManager();
+  private branchManager: BranchManager;
+
+  constructor() {
+    this.branchManager = new BranchManager(DEFAULT_STORAGE_DIR);
+  }
+
+  async initialize(): Promise<void> {
+    await this.branchManager.initialize();
+  }
 
   processThought(input: unknown): { content: Array<{ type: string; text: string }>; isError?: boolean } {
     try {
@@ -236,33 +246,42 @@ const server = new Server(
   }
 );
 
-const thinkingServer = new BranchingThoughtServer();
-
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [BRANCHING_THOUGHT_TOOL],
-}));
-
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  if (request.params.name === "branch-thinking") {
-    return thinkingServer.processThought(request.params.arguments);
-  }
-
-  return {
-    content: [{
-      type: "text",
-      text: `Unknown tool: ${request.params.name}`
-    }],
-    isError: true
-  };
-});
+// Server instance will be initialized in runServer()
+let thinkingServer: BranchingThoughtServer;
 
 async function runServer() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("Branch Thinking MCP Server running on stdio");
+  try {
+    // Initialize the thinking server first
+    const thinkingServer = new BranchingThoughtServer();
+    await thinkingServer.initialize();
+
+    // Set up request handlers
+    server.setRequestHandler(ListToolsRequestSchema, async () => ({
+      tools: [BRANCHING_THOUGHT_TOOL],
+    }));
+
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      if (request.params.name === "branch-thinking") {
+        return thinkingServer.processThought(request.params.arguments);
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: `Unknown tool: ${request.params.name}`
+        }],
+        isError: true
+      };
+    });
+
+    // Connect to transport
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.error("Branch Thinking MCP Server running on stdio");
+  } catch (error) {
+    console.error("Fatal error initializing server:", error);
+    process.exit(1);
+  }
 }
 
-runServer().catch((error) => {
-  console.error("Fatal error running server:", error);
-  process.exit(1);
-});
+runServer();
