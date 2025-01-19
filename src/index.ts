@@ -11,7 +11,10 @@ import { BranchManager } from './branchManager.js';
 import { BranchingThoughtInput } from './types.js';
 import chalk from 'chalk';
 
-const DEFAULT_STORAGE_DIR = '/Users/dd_dent/code/branch-thinking/storage/branches';
+import path from 'path';
+import os from 'os';
+
+const DEFAULT_STORAGE_DIR = path.join(os.homedir(), '.branch-thinking');
 
 class BranchingThoughtServer {
   private branchManager: BranchManager;
